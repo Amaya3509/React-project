@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
-import { Form, Icon, Input, Button, message} from 'antd'
-import axios from 'axios'
+import { Form, Icon, Input, Button } from 'antd'
+// 因为是分别暴露，所以这里要通过对象的解构赋值引入
+import { reqLogin } from '../../api' // index.js可以省略不写
 
 // 引入图片资源：在React脚手架中图片必须引入才会打包
 import logo from './logo.png'
@@ -18,7 +19,7 @@ class Login extends Component {
 		ev.preventDefault()
 
 		// validateFields方法是用来校验表单并获取表单的值
-		this.props.form.validateFields((error, values) => {
+		this.props.form.validateFields(async (error, values) => {
 			/*
 			error 代表表单校验结果
 					要么为null    代表校验通过
@@ -32,18 +33,18 @@ class Login extends Component {
 				// 校验通过
 				const {username, password} = values
 
-				// 发送请求，请求登录
-                // yarn add axios 看api文档接口怎么发送请求，拿到api文档使用接口之前，记得测试一下(Postman工具，如果是测试post请求，记得选post --> Body --> x-www-form-urlencoded)
-				axios.post('http://localhost:5000/login', {username, password})
-                    .then((res) => {
-                        // 获取请求回来的数据
-                        const {data} = res.data
+        // 发送请求，请求登录
+        // 为什么要用async await？？？？？？？、
+        const result = await reqLogin(username, password)
 
-                    })
-                    .catch(() => {
-
-                    })
-
+        if(result) {
+          // 登录成功
+          this.props.history.replace('/')
+        } else {
+          // 登录失败
+          // 重置密码为空
+          this.props.form.resetFields(['password'])
+        }
 
 			} else {
 				// 校验失败
