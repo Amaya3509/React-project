@@ -3,6 +3,8 @@ import { Layout } from 'antd';
 
 import LeftNav from '../../components/left-nav';
 import HeaderMain from '../../components/header-main';
+import {reqValidateUserInfo} from "../../api";
+import { getItem } from "../../utils/storage-tools";
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -15,6 +17,59 @@ export default class Admin extends Component {
     console.log(collapsed);
     this.setState({ collapsed });
   };
+
+  async componentWillMount() {
+    // 获取登录数据
+    const user = getItem()
+
+    /*
+        // 下面会涉及到的验证用户信息 - 服务器代码  位置：routers/index.js
+        router.post('/validate/user', (req, res) => {
+          const { id } = req.body;
+
+          UserModel.findById({_id: id}, (err, user) => {
+            if (!err && user) {
+              // 找到了用户数据
+              res.json({
+                status: 0,
+                data: {}
+              });
+            } else {
+              // 没有找到或者报错了
+              res.json({
+                status: 1,
+                msg: '没有找到该用户'
+              })
+            }
+          })
+        })
+       */
+
+    /*
+    if(!user || !user._id) {
+      this.props.history.replace('/login') // 没有登录(比如地址栏直接输入地址)就要返回至登录界面
+    } else {
+      /!*
+        有可能是直接设置localstorage里的值伪造(user._id是伪造不出来的)进来的，就需要进一步验证。
+        如果是伪造的数据，则result就为undefined，则需要退回到登录界面
+        reqValidateUserInfo()返回的是成功状态的promise对象，而result是代表这个promise对象里面的数据，要么是{}，要么是undefined
+       *!/
+      const result = await reqValidateUserInfo(user._id)
+      // console.log(result); // {} / undefined
+
+      if(!result) {
+        this.props.history.replace('/login')
+      }
+    }
+    */
+
+    // 以上代码可简写为:
+    if(user && user._id) {
+      const result = await reqValidateUserInfo(user._id)
+      if(result) return // 不用跳转至登录界面
+    }
+    this.props.history.replace('/login')
+  }
 
   render() {
     const { collapsed } = this.state;

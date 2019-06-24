@@ -2,6 +2,7 @@ import React from 'react'
 import { Form, Icon, Input, Button } from 'antd'
 // 因为是分别暴露，所以这里要通过对象的解构赋值引入
 import { reqLogin } from '../../api' // index.js可以省略不写
+import { setItem } from "../../utils/storage-tools";
 
 // 引入图片资源：在React脚手架中图片必须引入才会打包
 import logo from '../../assets/images/logo.png'
@@ -34,10 +35,14 @@ function Login(props) {
 				const {username, password} = values
 
         // 发送请求，请求登录
-        // 为什么要用async await？？？？？？？、
+        // 为什么要用async await? reqLogin()返回值是一个promise对象，是异步的，如果直接写同步代码根本无法判断它的状态!
         const result = await reqLogin(username, password)
 
         if(result) {
+          // 登录成功
+          // 只有这里能拿到用户名密码。保存用户信息
+          setItem(result)
+
           // 登录成功 跳转至主页面Admin
           /*
             跳转页面的2种方法:
