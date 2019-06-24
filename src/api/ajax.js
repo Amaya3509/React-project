@@ -40,7 +40,6 @@ export default function ajax(url, data = {}, method = 'GET') { // 给形参赋�
         // 请求失败  给用户提示错误信息
         message.error(data.msg, 2);
       }
-
     })
     .catch((err) => {
       // 请求失败: 网络错误、服务器内部错误等
