@@ -1,8 +1,18 @@
 import React, { Component } from 'react';
 import { Layout } from 'antd';
+import { Route, Switch, Redirect } from 'react-router-dom'
 
 import LeftNav from '../../components/left-nav';
 import HeaderMain from '../../components/header-main';
+import Home from '../home';
+import Category from '../category';
+import Product from '../product';
+import User from '../user';
+import Role from '../role';
+import Line from '../charts/line';
+import Bar from '../charts/bar';
+import Pie from '../charts/pie';
+
 import {reqValidateUserInfo} from "../../api";
 import { getItem } from "../../utils/storage-tools";
 
@@ -65,10 +75,10 @@ export default class Admin extends Component {
 
     // 以上代码可简写为:
     if(user && user._id) {
-      const result = await reqValidateUserInfo(user._id)
+      const result = await reqValidateUserInfo(user._id) // 记得一定要来气
       if(result) return // 不用跳转至登录界面
     }
-    this.props.history.replace('/login')
+    this.props.history.replace('/login') // 由于后面render中的<Redirect to="/home" />，所以就算退回到登录页面，也会立马变为/home页面 解决: 添加一个标识
   }
 
   render() {
@@ -85,7 +95,17 @@ export default class Admin extends Component {
           </Header>
           <Content style={{ margin: '25px 16px' }}>
             <div style={{ padding: 24, background: '#fff', minHeight: 360 }}>
-              欢迎使用硅谷后台管理系统
+              <Switch>
+                <Route path="/home" component={Home}/>
+                <Route path="/category" component={Category}/>
+                <Route path="/product" component={Product}/>
+                <Route path="/user" component={User}/>
+                <Route path="/role" component={Role}/>
+                <Route path="/charts/line" component={Line}/>
+                <Route path="/charts/bar" component={Bar}/>
+                <Route path="/charts/pie" component={Pie}/>
+                <Redirect to="/home" />
+              </Switch>
             </div>
           </Content>
           <Footer style={{ textAlign: 'center' }}>

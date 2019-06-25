@@ -25,23 +25,31 @@ export const reqLogin = (username,password) => ajax('/login', {username,password
 export const reqValidateUserInfo = (id) => ajax('/validate/user', {id}, 'POST')
 
 /*
- * 请求天气(用jsonp发送请求，可以在github中搜封装好的库)
+ * 请求天气接口的实现(用jsonp发送请求，可以在github中搜封装好的库)
  * jsonp只能发get请求!
  * @returns {Promise<any>}
  */
 export const reqWeather = function () {
-  jsonp('http://api.map.baidu.com/telematics/v3/weather?location=深圳&output=json&ak=3p49MVra6urFRGOT9s8UBWr2', {}, function (err, data) {
-    if(!err) {
-      const { dayPictureUrl, weather } = data.results[0].weather_data[0]
+  // 执行31行代码的时候会直接执行里面的回调函数-->发送请求-->return返回值，这些都是同步代码，请求发送成功后会触发回调函数function(err, data){}，这个回调函数是异步的
+  // 想要得到异步方法的返回值 --> 包裹一层Promise对象
+  return new Promise((resolve, reject) => {
+    jsonp('http://api.map.baidu.com/telematics/v3/weather?location=深圳&output=json&ak=3p49MVra6urFRGOT9s8UBWr2', {}, function (err, data) {
+      if(!err) {
+        const { dayPictureUrl, weather } = data.results[0].weather_data[0]
 
-      // 这样写
-      return {
-        weatherImg: dayPictureUrl,
-        weather
+        resolve({
+          weatherImg: dayPictureUrl,
+          weather
+        })
+      } else {
+        message.error('请求天气信息失败~请刷新试试~')
+        resolve() // 还是得调用resolve()，否则外面会卡死，只是里面不传任何数据(不让promise变为成功状态的话，await会一直等，后面的代码不会执行)
       }
-    } else {
-      message.error('请求天气信息失败~请刷新试试~')
-    }
+    })
   })
 }
+
+//
+export const reqCategories = (parentId) => ajax('/manage/category/list', {parentId}) // 默认就是get请求
+
 

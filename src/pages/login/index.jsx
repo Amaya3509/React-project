@@ -94,8 +94,8 @@ function Login(props) {
 		}
 	}
 
-  // getFieldDecorator也是一个高阶组件
-  const {getFieldDecorator} = props.form
+  // getFieldDecorator也是一个高阶组件，用于和表单进行双向绑定
+  const { getFieldDecorator } = props.form
 
   return <div className="login">
     <header className="login-header">
