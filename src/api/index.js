@@ -30,10 +30,12 @@ export const reqValidateUserInfo = (id) => ajax('/validate/user', {id}, 'POST')
  * @returns {Promise<any>}
  */
 export const reqWeather = function () {
-  // 执行31行代码的时候会直接执行里面的回调函数-->发送请求-->return返回值，这些都是同步代码，请求发送成功后会触发回调函数function(err, data){}，这个回调函数是异步的
+  let cancelFn = null
+  // 执行31行代码的时候会直接立即执行里面的回调函数-->发送请求-->return返回值，这些都是同步代码，请求发送成功后会触发回调函数function(err, data){}，这个回调函数是异步的，异步代码要等同步代码全部执行完毕才会执行
   // 想要得到异步方法的返回值 --> 包裹一层Promise对象
-  return new Promise((resolve, reject) => {
-    jsonp('http://api.map.baidu.com/telematics/v3/weather?location=深圳&output=json&ak=3p49MVra6urFRGOT9s8UBWr2', {}, function (err, data) {
+  const promise =  new Promise((resolve, reject) => {
+    // jsonp这个方法的返回值是一个函数，调用该函数可以取消正在进行的json请求
+    cancelFn = jsonp('http://api.map.baidu.com/telematics/v3/weather?location=深圳&output=json&ak=3p49MVra6urFRGOT9s8UBWr2', {}, function (err, data) {
       if(!err) {
         const { dayPictureUrl, weather } = data.results[0].weather_data[0]
 
@@ -43,13 +45,20 @@ export const reqWeather = function () {
         })
       } else {
         message.error('请求天气信息失败~请刷新试试~')
-        resolve() // 还是得调用resolve()，否则外面会卡死，只是里面不传任何数据(不让promise变为成功状态的话，await会一直等，后面的代码不会执行)
+        resolve() // 还是得调用resolve()，否则外面会卡死，只是里面不传任何数据(不让promise变为成功状态的话，await会一直等，后面的代码(只针对当前async函数中await后面的代码会等，函数外的不会等)不会执行)
       }
     })
   })
+
+  return {
+    promise,
+    cancelFn
+  }
 }
 
-//
+// 请求商品/品类管理的数据列表
 export const reqCategories = (parentId) => ajax('/manage/category/list', {parentId}) // 默认就是get请求
 
+// 请求添加品类
+export const reqAddCategory = (parentId, categoryName) => ajax('/manage/category/add', {parentId, categoryName}, 'POST')
 

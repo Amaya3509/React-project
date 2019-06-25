@@ -25,14 +25,19 @@ class HeaderMain extends Component {
 
   // 发送请求首先考虑在componentDidMount中发
   async componentDidMount() {
-    setInterval(() => {
+    this.timeId = setInterval(() => {
       this.setState({
         sysTime: Date.now(),
       })
     }, 1000)
 
     // 发送请求，请求天气
-    const result = await reqWeather()
+    const {promise, cancelFn} = reqWeather()
+
+    // 把cancelFn挂载到this上，否则下面无法直接使用，因为函数的变量是局部变量，外面的函数无法访问。挂载到this上最方便，最好操作
+    this.cancelFn = cancelFn
+
+    const result = await promise
     if(result) {
       // 请求成功
       this.setState(result)
@@ -43,6 +48,13 @@ class HeaderMain extends Component {
   componentWillReceiveProps(nextProps) {
     // 这里getTitle方法中的pathname还是上一次的值(最新的props在nextProps上，上一次的值在props上，所以默认得到的是上一次的值)
     this.title = this.getTitle(nextProps)
+  }
+
+  // 当界面从Admin登出为login界面时，就相当于Admin组件全部卸载了，重新创建了新的login组件，如果组件在页面中没有任何体现就相当于整体被卸载了，但在HeaderMain中开启了定时器还没清除，发送的请求也没取消，就会报错
+  // 清除定时器，取消请求
+  componentWillUnmount() {
+    clearInterval(this.timeId)
+    this.cancelFn()
   }
 
   // 登出函数

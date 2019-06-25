@@ -21,6 +21,8 @@ const { Header, Content, Footer, Sider } = Layout;
 export default class Admin extends Component {
   state = {
     collapsed: false,
+    isLoading: true,
+    success: false
   };
 
   onCollapse = collapsed => {
@@ -75,44 +77,67 @@ export default class Admin extends Component {
 
     // 以上代码可简写为:
     if(user && user._id) {
-      const result = await reqValidateUserInfo(user._id) // 记得一定要来气
-      if(result) return // 不用跳转至登录界面
+      const result = await reqValidateUserInfo(user._id)
+      // if(result) return // 不用跳转至登录界面
+      // if(result) this.success = true
+      if(result) {
+        return this.setState({
+          isLoading: false,
+          success: true
+        })
+      }
     }
-    this.props.history.replace('/login') // 由于后面render中的<Redirect to="/home" />，所以就算退回到登录页面，也会立马变为/home页面 解决: 添加一个标识
+
+    this.setState({
+      isLoading: false,
+      success: false
+    })
+
+    /*
+    如果执行到此代码了，由于后面render中的<Redirect to="/home" />，所以就算退回到登录页面，也会立马变为/home页面
+    解决: 添加一个标识
+    */
+    // this.props.history.replace('/login')
   }
 
   render() {
-    const { collapsed } = this.state;
+    const { collapsed, isLoading, success } = this.state;
 
-    return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <Sider collapsible collapsed={collapsed} onCollapse={this.onCollapse}>
-          <LeftNav collapsed={collapsed}/>
-        </Sider>
-        <Layout>
-          <Header style={{ background: '#fff', padding: 0, minHeight: 100 }}>
-            <HeaderMain />
-          </Header>
-          <Content style={{ margin: '25px 16px' }}>
-            <div style={{ padding: 24, background: '#fff', minHeight: 360 }}>
-              <Switch>
-                <Route path="/home" component={Home}/>
-                <Route path="/category" component={Category}/>
-                <Route path="/product" component={Product}/>
-                <Route path="/user" component={User}/>
-                <Route path="/role" component={Role}/>
-                <Route path="/charts/line" component={Line}/>
-                <Route path="/charts/bar" component={Bar}/>
-                <Route path="/charts/pie" component={Pie}/>
-                <Redirect to="/home" />
-              </Switch>
-            </div>
-          </Content>
-          <Footer style={{ textAlign: 'center' }}>
-            推荐使用谷歌浏览器，可以获得更佳页面操作体验
-          </Footer>
-        </Layout>
+    if(isLoading) return null // 页面是空白的
+
+    /*
+    这样写有问题，82行的代码必须等当前async函数中await后面的promise对象变为成功状态才会执行，而async函数外的代码是不会等的，所以此时render已经执行了，下面这行代码必须在80行代码执行完以后再执行，否则效果出错
+    解决: 添加一个loading状态
+     */
+    // if(!this.success) return <Redirect to="/login"/> // 这里都return了，后面的代码不会执行，就不会又跳转到/home页面了
+    return success ? <Layout style={{ minHeight: '100vh' }}>
+      <Sider collapsible collapsed={collapsed} onCollapse={this.onCollapse}>
+        <LeftNav collapsed={collapsed}/>
+      </Sider>
+      <Layout>
+        <Header style={{ background: '#fff', padding: 0, minHeight: 100 }}>
+          <HeaderMain />
+        </Header>
+        <Content style={{ margin: '25px 16px' }}>
+          <div style={{ padding: 24, background: '#fff', minHeight: 360 }}>
+            <Switch>
+              <Route path="/home" component={Home}/>
+              <Route path="/category" component={Category}/>
+              <Route path="/product" component={Product}/>
+              <Route path="/user" component={User}/>
+              <Route path="/role" component={Role}/>
+              <Route path="/charts/line" component={Line}/>
+              <Route path="/charts/bar" component={Bar}/>
+              <Route path="/charts/pie" component={Pie}/>
+              <Redirect to="/home" />
+            </Switch>
+          </div>
+        </Content>
+        <Footer style={{ textAlign: 'center' }}>
+          推荐使用谷歌浏览器，可以获得更佳页面操作体验
+        </Footer>
       </Layout>
-    );
+    </Layout> : <Redirect to="/login"/>
+
   }
 }
