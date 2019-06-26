@@ -62,3 +62,9 @@ export const reqCategories = (parentId) => ajax('/manage/category/list', {parent
 // 请求添加品类
 export const reqAddCategory = (parentId, categoryName) => ajax('/manage/category/add', {parentId, categoryName}, 'POST')
 
+// 请求更改分类名称
+export const reqRenameCategory = (categoryId, categoryName) => ajax('/manage/category/update', {categoryId, categoryName}, 'POST')
+
+// 请求删除品类
+export const reqDeleteCategory = (categoryId) => ajax('/manage/category/delete', {categoryId}, 'POST')
+

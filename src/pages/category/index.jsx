@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { Card, Button, Icon, Table, Modal, message } from 'antd'
 
-import { reqCategories, reqAddCategory } from '../../api'
+import { reqCategories, reqAddCategory, reqRenameCategory, reqDeleteCategory } from '../../api'
 import MyButton from '../../components/my-button'
 import AddCategoryForm from './add-category-form'
-// import UpdateCategoryNameForm from './update-category-name'
+import RenameCategoryForm from './rename-category-form'
 import './index.less';
 import './index.less'
 
@@ -15,19 +15,24 @@ export default class Category extends Component {
   // 要把请求回来的一级分类列表显示出来，证明界面有变化了，就必须定义状态
   state = {
     categories: [], // 一级分类列表
-    isShowAddCategory: false // 显示添加品类的对话框
+    isShowAddCategory: false, // 显示添加品类的对话框
+    isShowRenameCategory: false // 显示修改品类名称的对话框
   }
+
+  // 刚开始this.category会为undefined，undefined.name会报错，所以这里赋初始值
+  category = {} // 这样定义就是直接添加到this上的
 
   // 发送请求 只执行一次
   async componentDidMount(){
     const result = await reqCategories('0') // parentId: "0" 代表一级分类列表
     if(result) { // 如果有值说明请求成功
       this.setState({
-        categories: result
+        categories: result // 请求回来的分类列表的数据
       })
     }
   }
 
+  /*
   // 显示添加品类的对话框
   showAddCategory = () => {
       this.setState({
@@ -42,9 +47,57 @@ export default class Category extends Component {
     })
   }
 
+  // 显示修改分类名称的对话框
+  showRenameCategory = () => {
+    this.setState({
+      isShowRenameCategory: true
+    })
+  }
+
+  // 隐藏修改分类名称的对话框
+  hideRenameCategory = () => {
+    this.setState({
+      isShowRenameCategory: false
+    })
+  }
+  */
+
+  // 优化上述的代码，将显示/隐藏定义成一个方法
+  // 我们自己要传参，一般来说传参之后会立马调用，但这又是回调函数，点击的时候才会被调用，所以该方法里面要返回一个函数
+  // 切换显示
+  toggleDisplay = (stateName, stateValue) => {
+    return () => {
+      this.setState({
+        [stateName]: stateValue
+      })
+    }
+  }
+
+  // '修改分类名称'对话框的取消按钮的点击事件
+  cancelRenameCategory = () => {
+    // 清空表单项(这样就可以实现即便你先修改了名称再点的取消，下次再点进去的时候，显示的还是RenameCategoryForm组件中设置的默认值，即还是会显示你所点击的列表项的默认名称。若掉了此步，则实现不鸟，效果会有问题
+    const { form } = this.renameCategoryForm.props
+    form.resetFields(['categoryName'])
+
+    // 隐藏'修改分类名称'对话框
+    this.setState({
+      isShowRenameCategory: false
+    })
+  }
+
+  // 点击'修改名称'这个按钮，既要显示修改分类名称的对话框，又要获取到当前点击的列表项的信息
+  saveCategoryInfo = (category) => {
+    return () => {
+      // 保存当前点击的列表项的信息(刚开始this.category会为undefined）
+      this.category = category // 覆盖操作
+      this.setState({
+        isShowRenameCategory: true
+      })
+    }
+  }
+
   // 点击确认按钮，1.表单校验-->2.收集表单数据-->3.发送请求，添加品类
   addCategory = () => {
-    console.log(90);
     /*
     在AddCategoryForm组件的外面，却想要获取到该组件内部的from属性，该怎么办？
     不要采取给当前Category组件包裹Form.create()(Category)的方法，不靠谱，因为每一个form都相当于是一个独立的form，都与当前组件的表单相关，即使在Category中创建了form，也与点击'添加品类'出现的对话框中的表单没有任何关系，那么就不可以用Category中的form校验表单并收集数据了，必须用AddCategoryForm组件中的form
@@ -57,27 +110,100 @@ export default class Category extends Component {
     // console.log(this.addCategoryForm); // AddCategoryForm组件的实例对象
 
     // validateFields方法是用来校验表单并获取表单的值
-    this.addCategoryForm.props.form.validateFields(async (err, values) => {
-      console.log(11);
+    const { form } = this.addCategoryForm.props
+    form.validateFields(async (err, values) => {
       if(!err) {
-
-        console.log(values); // 为什么打印不出来？？？？？
+        // console.log(values); // {parentId: "0", categoryName: "111"}
         // 校验通过，发送请求
         const { parentId, categoryName } = values;
         const result = await reqAddCategory(parentId, categoryName)
         if(result) {
-          // 添加品类成功，提示成功信息，对话框隐藏
+          // 添加品类成功，提示成功信息，清空表单项数据，对话框隐藏，并显示在分类列表的最后面，
           message.success('添加品类成功~', 2) // 提示时间2s
+          // 清空表单数据
+          form.resetFields(['categoryName'])
+
+          /*
+            如果添加的是一级分类：就在一级分类列表中展示
+            如果添加的是二级分类：
+              若当前显示的是一级分类，则不需要展示
+              若当前显示的是二级分类，还需要满足添加二级分类的一级分类和当前显示的一级分类一致，一致才显示，否则不显示
+           */
+
+          const options = {
+            isShowAddCategory: false // 对话框隐藏
+          }
+
+          if(result.parentId === '0') {
+            options.categories = [...this.state.categories, result]
+
+          }
+
+          // 说明添加的是一级分类 --> 展示在分类列表的最后
+          this.setState(options) // 统一更新
+
+          /*
+            上面更新了两次状态，会重新渲染两次吗？
+               不会。React自己做的优化: 在一个很短时间内，多次的更新会合并为一次更新，所以只会渲染一次。
+               当然，还可以定义一个options，自己做合并
+           */
+        }
+      }
+    })
+  }
+
+  // 点击确认按钮，1.表单校验-->2.收集表单数据-->3.发送请求，修改分类名称
+  renameCategory = () => {
+    const { form } = this.renameCategoryForm.props
+    form.validateFields(async (err, values) => {
+      if(!err) {
+        // console.log(values); // {categoryName: "耳机111"}
+        // 校验通过，发送请求
+        const categoryId = this.category._id
+        const { categoryName } = values;
+        const result = await reqRenameCategory(categoryId, categoryName)
+        if(result) {
+          // 修改品类名称成功，提示成功信息，清空表单项数据，对话框隐藏，并显示在当前列表项
+          message.success('修改品类名称成功~', 2) // 提示时间2s
+          // 清空表单数据
+          form.resetFields(['categoryName'])
+
           this.setState({
-            isShowAddCategory: false
+            isShowRenameCategory: false,
+            // 修改数组中满足条件的某一个对象的name属性，不影响原数组，即产生一个新数组，而且新数组里的对象和原数组里的对象不存在任何引用关系
+            categories: this.state.categories.map((category) => {
+              let { _id, name, parentId } = category
+              if(_id === categoryId) name = categoryName
+
+              // 老师把下面这个return放在if里面写岂不是和原数组的对象存在了引用关系？？？可以吗？还是说修改了的对象要创建一个新对象，没有修改的可以存在引用关系？
+
+              return { // 对象的简写
+                _id,
+                name,
+                parentId
+              }
+            })
           })
         }
       }
     })
   }
 
+  deleteCategory = (category) => {
+    return async () => {
+      const result = await reqDeleteCategory(category._id)
+      if(result) {
+        // 删除品类成功，提示成功信息，对话框隐藏，删除列表项
+        message.success('删除品类成功~', 2) // 提示时间2s
+        this.setState({
+          categories: this.state.categories.filter((item) => item._id !== category._id)
+        })
+      }
+    }
+  }
+
   render() {
-    const { categories, isShowAddCategory } = this.state
+    const { categories, isShowAddCategory, isShowRenameCategory } = this.state
 
     // 决定表头内容
     const columns = [
@@ -89,22 +215,29 @@ export default class Category extends Component {
       {
         title: '操作',
         className: 'category-operation', // 可以根据类名给表头添加样式
-        dataIndex: 'operation',
+        // dataIndex: '_id', // 这句话如果不写，下面的category为当前页分类项的整个对象，如果这里写的是dataIndex: '_id'，下面的category就为当前页分类项的对象中_id的值
+
         // 改变当列的显示
-        render: text => {
+        render: category => {
+          // {parentId: "0", _id: "5d11816402e1ce1090ed8fbf", name: "电脑", __v: 0}
+          // console.log(category); // 当前页分类项有几个，就会一次性显示几个对象
+          // this.category = category // 不能在这存信息，因为当前页分类项有几个，这句话就会执行几次，导致最后只存了当前页最后一个列表项的对象数据。在'修改名称'按钮的点击事件里面存
+
           // 多个虚拟DOM对象必须要有一个根标签包裹
           return <div>
-            <MyButton>修改名称</MyButton>
+            <MyButton onClick={this.saveCategoryInfo(category)}>修改名称</MyButton>
             <MyButton>查看其子品类</MyButton>
+            <MyButton onClick={this.deleteCategory(category)}>删除品类</MyButton>
           </div>
         }
       }
     ];
+
     // 决定表格里面的数据
     /*const data = [
       {
         key: '1',
-        categoryName: '手机',
+        name: '手机',
         // operation: 'xxxxx',
       },
       {
@@ -124,7 +257,7 @@ export default class Category extends Component {
       }
     ];*/
 
-    return <Card title="一级分类列表" extra={<Button type="primary" onClick={this.showAddCategory}><Icon type="plus" />添加品类</Button>}>
+    return <Card title="一级分类列表" extra={<Button type="primary" onClick={this.toggleDisplay('isShowAddCategory', true)}><Icon type="plus" />添加品类</Button>}>
       {/*带边框的Table表格*/}
       <Table
         columns={columns}
@@ -140,17 +273,31 @@ export default class Category extends Component {
       />
 
       <Modal
-        title="Modal"
+        title="添加分类"
         visible={isShowAddCategory}
         onOk={this.addCategory}
-        onCancel={this.hideAddCategory}
+        onCancel={this.toggleDisplay('isShowAddCategory', false)}
         okText="确认"
         cancelText="取消"
       >
         {/*使用表单项，可以收集数据*/}
         {/*wrappedComponentRef中的参数form代表AddCategoryForm组件的实例对象*/}
         <AddCategoryForm categories={categories} wrappedComponentRef={(form) => this.addCategoryForm = form}/>
+    </Modal>
+
+      <Modal
+        title="修改分类名称"
+        visible={isShowRenameCategory}
+        onOk={this.renameCategory}
+        onCancel={this.cancelRenameCategory}
+        okText="确认"
+        cancelText="取消"
+        width={300} // 修改对话框的宽度
+      >
+        {/*使用表单项，可以收集数据*/}
+        {/*wrappedComponentRef中的参数form代表AddCategoryForm组件的实例对象*/}
+        <RenameCategoryForm categoryName={this.category.name} wrappedComponentRef={(form) => this.renameCategoryForm = form}/>
       </Modal>
-    </Card>;
+  </Card>;
   }
 }

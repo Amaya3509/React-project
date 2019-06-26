@@ -7,7 +7,7 @@ import { message } from 'antd'
  * @param url
  * @param data
  * @param method
- * @returns 返回值一定是成功状态promise对象（请求成功里面有数据，请求失败里面没有）
+ * @returns 返回值一定是成功状态promise对象（请求成功里面有数据，请求失败里面没有数据）
  */
 
 export default function ajax(url, data = {}, method = 'GET') { // 给形参赋默认值
@@ -35,7 +35,7 @@ export default function ajax(url, data = {}, method = 'GET') { // 给形参赋�
       if (data.status === 0) {
         // 请求成功
         // 返回一个成功状态的promise对象，内部有return后面的数据(data.data)
-        return data.data;
+        return data.data || {};
       } else {
         // 请求失败  给用户提示错误信息
         message.error(data.msg, 2);

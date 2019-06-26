@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Form, Input } from 'antd';
 import PropTypes from 'prop-types';
 
-class UpdateCategoryNameForm extends Component {
+class RenameCategoryForm extends Component {
   static propTypes = {
     categoryName: PropTypes.string.isRequired
   };
@@ -13,7 +13,7 @@ class UpdateCategoryNameForm extends Component {
     } else if (value === this.props.categoryName) {
       callback('请不要输入之前名称~');
     } else {
-      callback();
+      callback(); // 输入的值正确也要调用callback
     }
   };
 
@@ -26,7 +26,7 @@ class UpdateCategoryNameForm extends Component {
           getFieldDecorator(
             'categoryName',
             {
-              initialValue: this.props.categoryName,
+              initialValue: this.props.categoryName, // 默认值
               rules: [{
                 validator: this.validator
               }]
@@ -40,4 +40,4 @@ class UpdateCategoryNameForm extends Component {
   }
 }
 
-export default Form.create()(UpdateCategoryNameForm);
+export default Form.create()(RenameCategoryForm);

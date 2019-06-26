@@ -12,9 +12,11 @@ class AddCategoryForm extends Component {
 
   // 自定义校验规则 只要Input中一输入值就会触发validator这个函数
   validator = (rule, value, callback) => {
+    // 注意：validator函数针对Input输入值所有可能的情况，都要调用callback！漏掉一种会出问题
     if (!value) return callback('请输入分类名称~');
     const result = this.props.categories.find((category) => value === category.name)
     if(result) return callback('输入的分类名称已存在，请重新输入')
+    callback() // 针对输入值没问题的情况，一定记得也要调用callback，否则到时候会出问题！
   };
 
   render() {
@@ -57,7 +59,8 @@ class AddCategoryForm extends Component {
               ]
             }
           )(
-            <Input placeholder="请输入分类名称"/>
+            // autoComplete="off" 可以取消输入框的文本提示
+            <Input placeholder="请输入分类名称" autoComplete="off"/>
           )
         }
       </Item>
