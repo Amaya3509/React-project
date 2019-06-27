@@ -15,21 +15,47 @@ export default class Category extends Component {
   // 要把请求回来的一级分类列表显示出来，证明界面有变化了，就必须定义状态
   state = {
     categories: [], // 一级分类列表
-    isShowAddCategory: false, // 显示添加品类的对话框
-    isShowRenameCategory: false // 显示修改品类名称的对话框
+    subCategories: [], // 二级分类列表
+    isShowSubCategories: false, // 是否显示二级分类列表数据
+    isShowAddCategory: false, // 是否显示添加品类的对话框
+    isShowRenameCategory: false, // 是否显示修改品类名称的对话框
+    isLoading: true // 是否显示loading
   }
 
   // 刚开始this.category会为undefined，undefined.name会报错，所以这里赋初始值
   category = {} // 这样定义就是直接添加到this上的
 
   // 发送请求 只执行一次
-  async componentDidMount(){
-    const result = await reqCategories('0') // parentId: "0" 代表一级分类列表
+  componentDidMount(){
+    this.fetchCategories('0')
+  }
+
+  // isLoading在componentDidMount和showSubCategory中都要用到，所以这里就抽取成一个方法
+  // 发送请求，获取分类数据
+  fetchCategories = async (parentId) => {
+    this.setState({
+      isLoading: true
+    })
+
+    const result = await reqCategories(parentId) // parentId: "0" 代表一级分类列表
+
     if(result) { // 如果有值说明请求成功
-      this.setState({
-        categories: result // 请求回来的分类列表的数据
-      })
+      if(parentId === '0'){
+        this.setState({
+          categories: result // 请求回来的分类列表的数据
+        })
+      } else {
+        this.setState({
+          isShowSubCategories: true,
+          subCategories: result
+        })
+      }
     }
+
+    // 无论数据有没有请求回来，都要将isLoading置为false
+    this.setState({
+      isLoading: false
+    })
   }
 
   /*
@@ -85,17 +111,6 @@ export default class Category extends Component {
     })
   }
 
-  // 点击'修改名称'这个按钮，既要显示修改分类名称的对话框，又要获取到当前点击的列表项的信息
-  saveCategoryInfo = (category) => {
-    return () => {
-      // 保存当前点击的列表项的信息(刚开始this.category会为undefined）
-      this.category = category // 覆盖操作
-      this.setState({
-        isShowRenameCategory: true
-      })
-    }
-  }
-
   // 点击确认按钮，1.表单校验-->2.收集表单数据-->3.发送请求，添加品类
   addCategory = () => {
     /*
@@ -134,9 +149,12 @@ export default class Category extends Component {
             isShowAddCategory: false // 对话框隐藏
           }
 
-          if(result.parentId === '0') {
-            options.categories = [...this.state.categories, result]
+          const { isShowSubCategories } = this.state
 
+          if(result.parentId === '0') { // 添加的是一级分类
+            options.categories = [...this.state.categories, result]
+          } else if(isShowSubCategories && result.parentId === this.parentCategory._id){ // 添加的是二级分类
+            options.subCategories = [...this.state.subCategories, result]
           }
 
           // 说明添加的是一级分类 --> 展示在分类列表的最后
@@ -152,6 +170,17 @@ export default class Category extends Component {
     })
   }
 
+  // 点击'修改名称'这个按钮，既要显示修改分类名称的对话框，又要获取到当前点击的列表项的信息
+  saveCategoryInfo = (category) => {
+    return () => {
+      // 保存当前点击的列表项的信息(刚开始this.category会为undefined）
+      this.category = category // 覆盖操作
+      this.setState({
+        isShowRenameCategory: true
+      })
+    }
+  }
+
   // 点击确认按钮，1.表单校验-->2.收集表单数据-->3.发送请求，修改分类名称
   renameCategory = () => {
     const { form } = this.renameCategoryForm.props
@@ -163,27 +192,40 @@ export default class Category extends Component {
         const { categoryName } = values;
         const result = await reqRenameCategory(categoryId, categoryName)
         if(result) {
-          // 修改品类名称成功，提示成功信息，清空表单项数据，对话框隐藏，并显示在当前列表项
-          message.success('修改品类名称成功~', 2) // 提示时间2s
+          const { parentId } = this.category
+
+          let categoryData = this.state.categories
+          let stateName = 'categories'
+
+          if(parentId !== '0'){ // 二级分类
+            categoryData = this.state.subCategories
+            stateName = 'subCategories'
+          }
+
           // 清空表单数据
           form.resetFields(['categoryName'])
 
           this.setState({
             isShowRenameCategory: false,
-            // 修改数组中满足条件的某一个对象的name属性，不影响原数组，即产生一个新数组，而且新数组里的对象和原数组里的对象不存在任何引用关系
-            categories: this.state.categories.map((category) => {
+            // 修改数组中满足条件的某一个对象的name属性，不影响原数组，即产生一个新数组，只要不影响原数据，新数组里的对象和原数组里的对象存在引用关系也没事
+            [stateName]: categoryData.map((category) => {
               let { _id, name, parentId } = category
-              if(_id === categoryId) name = categoryName
+              if(_id === categoryId) {
+                name = categoryName
 
-              // 老师把下面这个return放在if里面写岂不是和原数组的对象存在了引用关系？？？可以吗？还是说修改了的对象要创建一个新对象，没有修改的可以存在引用关系？
-
-              return { // 对象的简写
-                _id,
-                name,
-                parentId
+                return { // 对象的简写
+                  _id,
+                  name,
+                  parentId
+                }
               }
+              // 没有修改的数据直接返回
+              return category
             })
           })
+
+          // 提示成功信息
+          message.success('修改品类名称成功~', 2) // 提示时间2s
         }
       }
     })
@@ -192,18 +234,51 @@ export default class Category extends Component {
   deleteCategory = (category) => {
     return async () => {
       const result = await reqDeleteCategory(category._id)
+      // console.log(result);
       if(result) {
-        // 删除品类成功，提示成功信息，对话框隐藏，删除列表项
+        if(result.parentId === '0'){
+          this.setState({
+            categories: this.state.categories.filter((item) => item._id !== category._id)
+          })
+        }else {
+          this.setState({
+            subCategories: this.state.subCategories.filter((item) => item._id !== category._id)
+          })
+        }
+
+        // 删除品类成功，对话框隐藏，删除列表项，提示成功信息
         message.success('删除品类成功~', 2) // 提示时间2s
-        this.setState({
-          categories: this.state.categories.filter((item) => item._id !== category._id)
-        })
       }
     }
   }
 
+  // '查看其子品类'按钮的点击事件
+  showSubCategory = (category) => {
+    return async () => {
+      // 存储二级分类的一级分类对象 --> category --> 到时候点击'查看其子品类'按钮进入二级分类显示页后，如果要添加分类的话就会用上！
+      this.parentCategory = category
+
+      // 请求二级分类数据
+      this.fetchCategories(category._id)
+    }
+  }
+
+  // 在二级分类显示界面，点击'一级分类'按钮，返回至一级分类列表即显示一级分类列表
+  goBack = () => {
+    this.setState({
+      isShowSubCategories: false,
+    })
+  }
+
   render() {
-    const { categories, isShowAddCategory, isShowRenameCategory } = this.state
+    const {
+      categories,
+      subCategories,
+      isShowSubCategories,
+      isShowAddCategory,
+      isShowRenameCategory,
+      isLoading
+    } = this.state
 
     // 决定表头内容
     const columns = [
@@ -226,7 +301,9 @@ export default class Category extends Component {
           // 多个虚拟DOM对象必须要有一个根标签包裹
           return <div>
             <MyButton onClick={this.saveCategoryInfo(category)}>修改名称</MyButton>
-            <MyButton>查看其子品类</MyButton>
+            {
+              isShowSubCategories? null : <MyButton onClick={this.showSubCategory(category)}>查看其子品类</MyButton>
+            }
             <MyButton onClick={this.deleteCategory(category)}>删除品类</MyButton>
           </div>
         }
@@ -257,11 +334,11 @@ export default class Category extends Component {
       }
     ];*/
 
-    return <Card title="一级分类列表" extra={<Button type="primary" onClick={this.toggleDisplay('isShowAddCategory', true)}><Icon type="plus" />添加品类</Button>}>
+    return <Card title={isShowSubCategories? <div><MyButton onClick={this.goBack}>一级分类</MyButton><Icon type="arrow-right" />&nbsp;{this.parentCategory.name}</div> : "一级分类列表"} extra={<Button type="primary" onClick={this.toggleDisplay('isShowAddCategory', true)}><Icon type="plus" />添加品类</Button>}>
       {/*带边框的Table表格*/}
       <Table
         columns={columns}
-        dataSource={categories}
+        dataSource={isShowSubCategories? subCategories : categories} // 展示数据
         bordered
         pagination={{
           showSizeChanger: true,
@@ -270,6 +347,7 @@ export default class Category extends Component {
           showQuickJumper: true // 至少有2页才看得见
         }}
         rowKey="_id" // 解决报错 通过api接口可以看到请求回来的每个列表对应的对象都有个"_id"属性
+        loading={isLoading}
       />
 
       <Modal
