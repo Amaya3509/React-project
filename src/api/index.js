@@ -56,7 +56,7 @@ export const reqWeather = function () {
   }
 }
 
-// 请求商品/品类管理的数据列表
+// 请求商品下面的品类管理的数据列表(前台分页: 一次性将所有数据请求回来，前台分页显示)
 export const reqCategories = (parentId) => ajax('/manage/category/list', {parentId}) // 默认就是get请求
 
 // 请求添加品类
@@ -68,3 +68,5 @@ export const reqRenameCategory = (categoryId, categoryName) => ajax('/manage/cat
 // 请求删除品类
 export const reqDeleteCategory = (categoryId) => ajax('/manage/category/delete', {categoryId}, 'POST')
 
+// 请求商品下面的商品管理的数据列表(后台分页: 每次只请求一页的数据，点击第二页的时候，再请求第二页的数据)
+export const reqProducts = (pageNum, pageSize) => ajax('/manage/product/list', {pageNum, pageSize})

@@ -29,7 +29,18 @@ class LeftNav extends Component {
   // 在render方法之前生成菜单，并只执行一次(不写在render中是因为每次更新都会触发render方法，又得重新生成菜单，这不是我们想要的效果)
   // 这个生命周期回调函数的返回值是无法拿到的，因为不是由我们调用的
   componentWillMount() { // 初始化渲染中会触发该函数
-    const { pathname } = this.props.location;
+    let { pathname } = this.props.location;
+
+    /*
+      pathname: '/product/saveupdate'  --> '/product'
+                '/product/'  --> '/product'
+     */
+
+    const pathnameReg = /^\/product\//
+    if(pathnameReg.test(pathname)) {
+      pathname = '/product'
+    }
+
     let isHome = true
 
     // 根据menuList生成菜单

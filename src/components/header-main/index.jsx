@@ -78,7 +78,17 @@ class HeaderMain extends Component {
    */
   getTitle = (nextProps) => {
     // 获取当前路径
-    const { pathname } = nextProps.location
+    let { pathname } = nextProps.location
+
+    /*
+      pathname: '/product/saveupdate'  --> '/product'
+                '/product/'  --> '/product'
+     */
+
+    const pathnameReg = /^\/product\//
+    if(pathnameReg.test(pathname)) {
+      pathname = '/product'
+    }
 
     // menuList.find((menu) => menu.key === pathname) 该方法只能找到一级菜单
     // 用for循环可以控制找到了就终止，而forEach实现不鸟，所以这里用for循环
